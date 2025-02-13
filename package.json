@@ -30,7 +30,8 @@
     "electron-updater": "^6.1.7",
     "i18next": "^24.2.2",
     "react-i18next": "^15.4.0",
-    "react-redux": "^9.2.0"
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.1.5"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
