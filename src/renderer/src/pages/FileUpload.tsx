@@ -39,6 +39,7 @@ const FileUpload: React.FC = () => {
   const [isDirectory, setIsDirectory] = useState(false)
   const [isCompressed, setIsCompressed] = useState(false)
   const [shareType, setShareType] = useState<string>('public')
+  const [form] = Form.useForm()
 
   const handleAddUser = (value: string) => {
     if (value && !users.includes(value)) {
@@ -67,10 +68,10 @@ const FileUpload: React.FC = () => {
   }
 
   const handleSubmit = () => {
-    if (description.length < 10) {
-      message.error('Açıklama en az 10 karakter olmalıdır.')
-      return
-    }
+    form.validateFields(['users', 'description']).then((values) => {
+      console.log(values)
+    })
+
     message.success('Dosya başarıyla yüklendi!')
   }
 
@@ -80,10 +81,10 @@ const FileUpload: React.FC = () => {
   }
 
   return (
-    <div className=" min-h-screen flex flex-col justify-center items-center">
+    <div className="min-h-screen flex flex-col justify-center items-center">
       <Card className="w-full max-w-2xl shadow-lg">
         <h2 className="text-xl font-semibold mb-4 text-center">Dosya Yükleme</h2>
-        <Form layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item label="Paylaşım Tipi">
             <Select value={shareType} onChange={setShareType} style={{ width: '100%' }}>
               <Option value="public">Genel</Option>
@@ -92,7 +93,11 @@ const FileUpload: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Paylaşılacak Kullanıcılar">
+          <Form.Item
+            label="Paylaşılacak Kullanıcılar"
+            name={'users'}
+            rules={[{ required: true, message: 'En az bir kullanıcı seçilmelidir.' }]}
+          >
             <Select
               mode="tags"
               style={{ width: '100%' }}
@@ -108,7 +113,11 @@ const FileUpload: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Açıklama">
+          <Form.Item
+            label="Açıklama"
+            name={'description'}
+            rules={[{ required: true, min: 10, message: 'Açıklama en az 10 karakter olmalıdır.' }]}
+          >
             <TextArea
               rows={1}
               value={description}
@@ -158,17 +167,17 @@ const FileUpload: React.FC = () => {
               )}
             />
           )}
+          {showControls && (
+            <div className="w-full flex justify-center gap-4">
+              <Button icon={<UploadOutlined />} type="primary" htmlType="submit">
+                Yükle
+              </Button>
+              <Button icon={<ClearOutlined />} danger onClick={handleClearAllFiles}>
+                Tümünü Temizle
+              </Button>
+            </div>
+          )}
         </Form>
-        {showControls && (
-          <div className="w-full flex justify-center gap-4">
-            <Button icon={<UploadOutlined />} type="primary" onClick={handleSubmit}>
-              Yükle
-            </Button>
-            <Button icon={<ClearOutlined />} danger onClick={handleClearAllFiles}>
-              Tümünü Temizle
-            </Button>
-          </div>
-        )}
       </Card>
 
       <FloatButton
