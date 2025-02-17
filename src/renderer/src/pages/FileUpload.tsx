@@ -10,15 +10,22 @@ import {
   UploadProps,
   UploadFile,
   Progress,
-  Collapse,
-  List
+  List,
+  FloatButton,
+  Checkbox
 } from 'antd'
-import { UploadOutlined, InboxOutlined, DeleteOutlined } from '@ant-design/icons'
+import {
+  UploadOutlined,
+  InboxOutlined,
+  DeleteOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ClearOutlined
+} from '@ant-design/icons'
 
 const { Dragger } = Upload
 const { TextArea } = Input
 const { Option } = Select
-const { Panel } = Collapse
 
 type FileType = UploadFile<any>[]
 
@@ -26,10 +33,12 @@ const FileUpload: React.FC = () => {
   const [users, setUsers] = useState<string[]>([])
   const [description, setDescription] = useState<string>('')
   const [fileList, setFileList] = useState<FileType>([])
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
-  const [isFilesPanelOpen, setIsFilesPanelOpen] = useState<boolean>(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [isAtBottom, setIsAtBottom] = useState(false)
+  const [showControls, setShowControls] = useState(false)
+  const [isDirectory, setIsDirectory] = useState(false)
+  const [isCompressed, setIsCompressed] = useState(false)
+  const [shareType, setShareType] = useState<string>('public')
 
   const handleAddUser = (value: string) => {
     if (value && !users.includes(value)) {
@@ -43,18 +52,18 @@ const FileUpload: React.FC = () => {
 
   const handleUpload: UploadProps['onChange'] = (info) => {
     setFileList(info.fileList as FileType)
-    const progress = { ...uploadProgress }
-    info.fileList.forEach((file) => {
-      progress[file.uid] = Math.floor(Math.random() * 50) + 50 // Fake progress simulation
-    })
-    setUploadProgress(progress)
+    setShowControls(info.fileList.length > 0)
   }
 
   const handleRemoveFile = (file: UploadFile) => {
-    setFileList(fileList.filter((f) => f.uid !== file.uid))
-    const updatedProgress = { ...uploadProgress }
-    delete updatedProgress[file.uid]
-    setUploadProgress(updatedProgress)
+    const updatedList = fileList.filter((f) => f.uid !== file.uid)
+    setFileList(updatedList)
+    setShowControls(updatedList.length > 0)
+  }
+
+  const handleClearAllFiles = () => {
+    setFileList([])
+    setShowControls(false)
   }
 
   const handleSubmit = () => {
@@ -62,23 +71,27 @@ const FileUpload: React.FC = () => {
       message.error('Açıklama en az 10 karakter olmalıdır.')
       return
     }
-    setUploadProgress((prev) => {
-      const newProgress = { ...prev }
-      Object.keys(newProgress).forEach((key) => {
-        newProgress[key] = 100
-      })
-      return newProgress
-    })
-    setIsCollapsed(true)
-    setIsFilesPanelOpen(true)
     message.success('Dosya başarıyla yüklendi!')
   }
 
+  const handleScrollToggle = () => {
+    window.scrollTo({ top: isAtBottom ? 0 : document.body.scrollHeight, behavior: 'smooth' })
+    setIsAtBottom(!isAtBottom)
+  }
+
   return (
-    <div className="p-6 min-h-screen flex justify-center items-center">
+    <div className=" min-h-screen flex flex-col justify-center items-center">
       <Card className="w-full max-w-2xl shadow-lg">
-        <h2 className="text-xl font-semibold mb-4">Dosya Yükleme</h2>
+        <h2 className="text-xl font-semibold mb-4 text-center">Dosya Yükleme</h2>
         <Form layout="vertical" onFinish={handleSubmit}>
+          <Form.Item label="Paylaşım Tipi">
+            <Select value={shareType} onChange={setShareType} style={{ width: '100%' }}>
+              <Option value="public">Genel</Option>
+              <Option value="private">Özel</Option>
+              <Option value="restricted">Kısıtlı</Option>
+            </Select>
+          </Form.Item>
+
           <Form.Item label="Paylaşılacak Kullanıcılar">
             <Select
               mode="tags"
@@ -95,21 +108,27 @@ const FileUpload: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="Açıklama"
-            rules={[{ required: true, min: 10, message: 'Açıklama en az 10 karakter olmalıdır.' }]}
-          >
+          <Form.Item label="Açıklama">
             <TextArea
-              rows={4}
+              rows={1}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </Form.Item>
 
+          <Form.Item>
+            <Checkbox checked={isDirectory} onChange={(e) => setIsDirectory(e.target.checked)}>
+              Dizin olarak yükle
+            </Checkbox>
+            <Checkbox checked={isCompressed} onChange={(e) => setIsCompressed(e.target.checked)}>
+              Sıkıştır
+            </Checkbox>
+          </Form.Item>
+
           <Form.Item label="Dosya Yükleme">
             <Dragger
               multiple
-              directory
+              directory={isDirectory}
               beforeUpload={() => false}
               fileList={fileList}
               onChange={handleUpload}
@@ -134,21 +153,30 @@ const FileUpload: React.FC = () => {
                     </Button>
                   ]}
                 >
-                  <List.Item.Meta
-                    title={file.name}
-                    description={uploadProgress[file.uid] && <Progress percent={uploadProgress[file.uid] || 0} />}
-                  />
+                  <List.Item.Meta title={file.name} description={<Progress percent={100} />} />
                 </List.Item>
               )}
             />
           )}
-          <Form.Item>
-            <Button type="primary" htmlType="submit" className="w-full">
+        </Form>
+        {showControls && (
+          <div className="w-full flex justify-center gap-4">
+            <Button icon={<UploadOutlined />} type="primary" onClick={handleSubmit}>
               Yükle
             </Button>
-          </Form.Item>
-        </Form>
+            <Button icon={<ClearOutlined />} danger onClick={handleClearAllFiles}>
+              Tümünü Temizle
+            </Button>
+          </div>
+        )}
       </Card>
+
+      <FloatButton
+        icon={isAtBottom ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+        type="primary"
+        className="fixed bottom-6 right-6"
+        onClick={handleScrollToggle}
+      />
     </div>
   )
 }
