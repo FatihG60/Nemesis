@@ -68,11 +68,24 @@ const FileUpload: React.FC = () => {
   }
 
   const handleSubmit = () => {
-    form.validateFields(['users', 'description']).then((values) => {
-      console.log(values)
-    })
-
-    message.success('Dosya başarıyla yüklendi!')
+    form
+      .validateFields(['users', 'description'])
+      .then((values) => {
+        // dosya yükleme işlemleri burada yapılacak
+        fileList.forEach((file) => {
+          console.log(file)
+        })
+        console.log(values)
+        message.success('Dosya başarıyla yüklendi!')
+      })
+      .catch((error) => {
+        message.error(error.errorFields[0].errors[0])
+      })
+      .finally(() => {
+        // form resetleme işlemleri burada yapılacak
+        form.resetFields()
+        message.info('Form validasyonu tamamlandı!')
+      })
   }
 
   const handleScrollToggle = () => {
