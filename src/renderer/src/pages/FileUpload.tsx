@@ -39,7 +39,48 @@ const FileUpload: React.FC = () => {
   const [isDirectory, setIsDirectory] = useState(false)
   const [isCompressed, setIsCompressed] = useState(false)
   const [shareType, setShareType] = useState<string>('public')
+  const [fileStates, setFileStates] = useState<{
+    [key: string]: { hash?: string; copied?: boolean; progress?: number; loading?: boolean }
+  }>({})
   const [form] = Form.useForm()
+
+  const calculateHash = async (file: UploadFile<any>) => {
+    const buffer = await file!.originFileObj!.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest('SHA-512', buffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  }
+
+  const handleHashCalculation = async (file: UploadFile<any>) => {
+    if (!fileStates[file.uid]?.hash) {
+      setFileStates((prev) => ({
+        ...prev,
+        [file.uid]: { ...prev[file.uid], loading: true }
+      }))
+      const computedHash = await calculateHash(file)
+      setFileStates((prev) => ({
+        ...prev,
+        [file.uid]: {
+          hash: computedHash,
+          copied: false,
+          progress: prev[file.uid]?.progress || 0,
+          loading: false
+        }
+      }))
+    } else {
+      navigator.clipboard.writeText(fileStates[file.uid].hash!)
+      setFileStates((prev) => ({
+        ...prev,
+        [file.uid]: { ...prev[file.uid], copied: true }
+      }))
+      setTimeout(() => {
+        setFileStates((prev) => ({
+          ...prev,
+          [file.uid]: { ...prev[file.uid], copied: false }
+        }))
+      }, 2000)
+    }
+  }
 
   const handleAddUser = (value: string) => {
     if (value && !users.includes(value)) {
@@ -59,6 +100,11 @@ const FileUpload: React.FC = () => {
   const handleRemoveFile = (file: UploadFile) => {
     const updatedList = fileList.filter((f) => f.uid !== file.uid)
     setFileList(updatedList)
+    setFileStates((prev) => {
+      const newState = { ...prev }
+      delete newState[file.uid]
+      return newState
+    })
     setShowControls(updatedList.length > 0)
   }
 
@@ -91,6 +137,15 @@ const FileUpload: React.FC = () => {
   const handleScrollToggle = () => {
     window.scrollTo({ top: isAtBottom ? 0 : document.body.scrollHeight, behavior: 'smooth' })
     setIsAtBottom(!isAtBottom)
+  }
+  const formatFileSize = (size) => {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    let unitIndex = 0
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024
+      unitIndex++
+    }
+    return size.toFixed(2) + ' ' + units[unitIndex]
   }
 
   return (
@@ -172,14 +227,28 @@ const FileUpload: React.FC = () => {
                   actions={[
                     <Button icon={<DeleteOutlined />} onClick={() => handleRemoveFile(file)} danger>
                       Sil
+                    </Button>,
+                    <Button
+                      onClick={() => handleHashCalculation(file)}
+                      loading={fileStates[file.uid]?.loading}
+                    >
+                      {fileStates[file.uid]?.hash
+                        ? fileStates[file.uid]?.copied
+                          ? 'Kopyalandı!'
+                          : 'Hash Kopyala'
+                        : 'Hash Hesapla'}
                     </Button>
                   ]}
                 >
-                  <List.Item.Meta title={file.name} description={<Progress percent={100} />} />
+                  <List.Item.Meta
+                    title={`${file.name} (${formatFileSize(file.size!)})`}
+                    description={<Progress percent={fileStates[file.uid]?.progress || 100} />}
+                  />
                 </List.Item>
               )}
             />
           )}
+
           {showControls && (
             <div className="w-full flex justify-center gap-4">
               <Button icon={<UploadOutlined />} type="primary" htmlType="submit">
