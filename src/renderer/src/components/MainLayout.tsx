@@ -57,13 +57,21 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
     }
   }
 
-  const userMenu = (
-    <Menu>
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
-        Çıkış Yap
-      </Menu.Item>
-    </Menu>
-  )
+  const userMenuItems = [
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Çıkış Yap',
+      onClick: handleLogout
+    }
+  ];
+  const menuItems = [
+    { key: '1', icon: <DashboardOutlined />, label: 'Dashboard' },
+    { key: '2', icon: <UploadOutlined />, label: 'Dosya Yükleme' },
+    { key: '3', icon: <MessageOutlined />, label: 'Mesajlaşma' },
+    { key: '4', icon: <DesktopOutlined />, label: 'PC Durumu' },
+    { key: '5', icon: <UsbOutlined />, label: 'USB Aygıtları' }
+  ];
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -73,23 +81,8 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
           mode="inline"
           selectedKeys={[selectedKey]}
           onClick={handleMenuClick}
-        >
-          <Menu.Item key="1" icon={<DashboardOutlined />}>
-            Dashboard
-          </Menu.Item>
-          <Menu.Item key="2" icon={<UploadOutlined />}>
-            Dosya Yükleme
-          </Menu.Item>
-          <Menu.Item key="3" icon={<MessageOutlined />}>
-            Mesajlaşma
-          </Menu.Item>
-          <Menu.Item key="4" icon={<DesktopOutlined />}>
-            PC Durumu
-          </Menu.Item>
-          <Menu.Item key="5" icon={<UsbOutlined />}>
-            USB Aygıtları
-          </Menu.Item>
-        </Menu>
+          items={menuItems}
+        />
       </Sider>
       <Layout>
         <Header
@@ -109,7 +102,7 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
               checkedChildren={<MoonOutlined style={{ color: '#fadb14' }} />}
               unCheckedChildren={<SunOutlined style={{ color: '#ffa500' }} />}
             />
-            <Dropdown overlay={userMenu} trigger={['click']}>
+            <Dropdown menu={{items: userMenuItems}} trigger={['click']}>
               <Tooltip title={userName}>
                 <Avatar icon={<UserOutlined />} style={{ cursor: 'pointer' }} />
               </Tooltip>
