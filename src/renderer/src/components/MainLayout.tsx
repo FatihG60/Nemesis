@@ -10,13 +10,15 @@ import {
   MoonOutlined,
   SunOutlined,
   LogoutOutlined,
-  UserOutlined
+  UserOutlined,
+  DownloadOutlined
 } from '@ant-design/icons'
 import Dashboard from '../pages/Dashboard'
 import FileUpload from '../pages/FileUpload'
 import Messaging from '../pages/Messaging'
 import PCStatus from '../pages/PCStatus'
 import USBDevices from '../pages/USBDevices'
+import FileDownload from '../pages/FileDownload'
 
 const { Header, Sider, Content } = Layout
 
@@ -47,10 +49,12 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
       case '2':
         return <FileUpload />
       case '3':
-        return <Messaging />
+        return <FileDownload />
       case '4':
-        return <PCStatus />
+        return <Messaging />
       case '5':
+        return <PCStatus />
+      case '6':
         return <USBDevices />
       default:
         return <Dashboard />
@@ -64,14 +68,15 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
       label: 'Çıkış Yap',
       onClick: handleLogout
     }
-  ];
+  ]
   const menuItems = [
     { key: '1', icon: <DashboardOutlined />, label: 'Dashboard' },
     { key: '2', icon: <UploadOutlined />, label: 'Dosya Yükleme' },
-    { key: '3', icon: <MessageOutlined />, label: 'Mesajlaşma' },
-    { key: '4', icon: <DesktopOutlined />, label: 'PC Durumu' },
-    { key: '5', icon: <UsbOutlined />, label: 'USB Aygıtları' }
-  ];
+    { key: '3', icon: <DownloadOutlined />, label: 'Dosya İndirme' },
+    { key: '4', icon: <MessageOutlined />, label: 'Mesajlaşma' },
+    { key: '5', icon: <DesktopOutlined />, label: 'PC Durumu' },
+    { key: '6', icon: <UsbOutlined />, label: 'USB Aygıtları' }
+  ]
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -102,7 +107,7 @@ const MainLayout = ({ darkMode, toggleTheme }) => {
               checkedChildren={<MoonOutlined style={{ color: '#fadb14' }} />}
               unCheckedChildren={<SunOutlined style={{ color: '#ffa500' }} />}
             />
-            <Dropdown menu={{items: userMenuItems}} trigger={['click']}>
+            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
               <Tooltip title={userName}>
                 <Avatar icon={<UserOutlined />} style={{ cursor: 'pointer' }} />
               </Tooltip>
