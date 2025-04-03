@@ -1,22 +1,29 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron';
+import { electronAPI } from '@electron-toolkit/preload';
 
-// Custom APIs for renderer
-const api = {}
+// USB API'yi expose et
+const api = {
+  getUsbDrives: () => ipcRenderer.invoke('get-usb-drives'),
+  onUsbDeviceAdded: (callback: (device: any) => void) => {
+    ipcRenderer.on('usb-device-added', (_, device) => callback(device));
+  },
+  onUsbDeviceRemoved: (callback: (device: any) => void) => {
+    ipcRenderer.on('usb-device-removed', (_, device) => callback(device));
+  },
+};
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+// Eğer contextIsolation etkinse güvenli şekilde expose et
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('electron', electronAPI);
+    contextBridge.exposeInMainWorld('api', api);
   } catch (error) {
-    console.error(error)
+    console.error('Preload hata:', error);
   }
 } else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+  // Eğer contextIsolation kapalıysa, doğrudan window objesine ekle
+  // @ts-ignore
+  window.electron = electronAPI;
+  // @ts-ignore
+  window.api = api;
 }

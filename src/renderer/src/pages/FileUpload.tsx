@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import {
   Upload,
   Button,
@@ -33,7 +33,6 @@ const FileUpload: React.FC = () => {
   const [users, setUsers] = useState<string[]>([])
   const [description, setDescription] = useState<string>('')
   const [fileList, setFileList] = useState<FileType>([])
-  const inputRef = useRef<HTMLInputElement | null>(null)
   const [isAtBottom, setIsAtBottom] = useState(false)
   const [showControls, setShowControls] = useState(false)
   const [isDirectory, setIsDirectory] = useState(false)
@@ -94,6 +93,7 @@ const FileUpload: React.FC = () => {
 
   const handleUpload: UploadProps['onChange'] = (info) => {
     setFileList(info.fileList as FileType)
+    console.log(info.fileList)
     setShowControls(info.fileList.length > 0)
   }
 
