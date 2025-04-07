@@ -91,6 +91,24 @@ ipcMain.handle('list-root-disks', async () => {
   // Linux / macOS için: root dizin altındaki bağlanan dizinleri döndür
   return ['/']
 })
+ipcMain.handle('select-mtp-files', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Telefon Dosyası Seç',
+    properties: ['treatPackageAsDirectory', 'multiSelections'],
+    securityScopedBookmarks: true,
+    filters: [
+      {
+        name: 'Tüm Dosyalar',
+        extensions: ['*']
+      }
+    ],
+    message: 'Lütfen dosyaları seçin'
+  })
+
+  if (result.canceled) return []
+  console.log('Seçilen dosyalar:', result.filePaths)
+  return result.filePaths
+})
 
 function zipFilesWithStructure(
   outputPath: string,

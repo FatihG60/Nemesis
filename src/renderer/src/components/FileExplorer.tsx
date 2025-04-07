@@ -43,7 +43,6 @@ const FileExplorer: React.FC = () => {
   const [filterText, setFilterText] = useState<string>('')
   const [zipProgress, setZipProgress] = useState<number | null>(null)
 
-
   useEffect(() => {
     ipcRenderer
       .invoke('list-root-disks')
@@ -56,16 +55,36 @@ const FileExplorer: React.FC = () => {
     const onProgress = (_event: any, percent: number) => {
       setZipProgress(percent)
     }
-  
+
     window.electron.ipcRenderer.on('zip-progress', onProgress)
-  
+
     return () => {
       window.electron.ipcRenderer.removeAllListeners('zip-progress')
     }
   }, [])
-  
 
-  const handleDiskSelect = (disk: string) => {
+  const handleDiskSelect = async (disk: string) => {
+    if (disk === 'MTP') {
+      try {
+        const paths: string[] = await ipcRenderer.invoke('select-mtp-files')
+        const mapped: FileEntry[] = await Promise.all(
+          paths.map(async (filePath) => {
+            const size = await ipcRenderer.invoke('get-file-size', filePath)
+            return {
+              name: filePath.split(/\\|\//).pop() || 'Dosya',
+              path: filePath,
+              isDirectory: false,
+              size
+            }
+          })
+        )
+        setAddedFiles((prev) => [...prev, ...mapped])
+      } catch (err) {
+        message.error('Dosyalar alınamadı.')
+      }
+      return
+    }
+
     setCurrentPath(disk)
     loadDirectory(disk)
   }
@@ -121,7 +140,7 @@ const FileExplorer: React.FC = () => {
   const handleZipFiles = async () => {
     try {
       setZipProgress(0)
-      const paths = addedFiles.map(file => file.path)
+      const paths = addedFiles.map((file) => file.path)
       const zipPath = await ipcRenderer.invoke('zip-files', paths)
       setZipProgress(null)
       message.success(`Zip oluşturuldu: ${zipPath}`)
@@ -130,7 +149,6 @@ const FileExplorer: React.FC = () => {
       message.error('Zip dosyası oluşturulamadı.')
     }
   }
-  
 
   const formatFileSize = (size?: number) => {
     if (typeof size !== 'number') return '-'
@@ -157,6 +175,9 @@ const FileExplorer: React.FC = () => {
                 {disk}
               </Option>
             ))}
+            <Option key="MTP" value="MTP">
+              📱 MTP (Telefon)
+            </Option>
           </Select>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
