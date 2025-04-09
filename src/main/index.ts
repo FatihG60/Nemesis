@@ -9,6 +9,7 @@ import path from 'path'
 import archiver from 'archiver'
 import { platform } from 'os'
 import { promisify } from 'util'
+import winattr from 'winattr'
 
 // 🚀 __dirname alternatifi:
 const __filename = fileURLToPath(import.meta.url)
@@ -50,12 +51,38 @@ ipcMain.handle('select-directory', async () => {
 })
 
 ipcMain.handle('read-directory', async (_event, dirPath: string) => {
-  const files = await fs.promises.readdir(dirPath, { withFileTypes: true })
-  return files.map((file) => ({
-    name: file.name,
-    path: path.join(dirPath, file.name),
-    isDirectory: file.isDirectory()
-  }))
+  const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true })
+
+  const filtered: any[] = []
+
+  for (const file of dirents) {
+    const fullPath = path.join(dirPath, file.name)
+
+    // Başında nokta olan dosyaları filtrele (UNIX hidden files)
+    if (file.name.startsWith('.')) continue
+
+    // Sadece Windows için winattr kontrolü
+    if (process.platform === 'win32') {
+      try {
+        const attrs = await new Promise<any>((resolve, reject) =>
+          winattr.get(fullPath, (err, attrs) => (err ? reject(err) : resolve(attrs)))
+        )
+
+        if (attrs.hidden || attrs.system) continue
+      } catch (err) {
+        // Erişim hataları varsa dosyayı atla
+        continue
+      }
+    }
+
+    filtered.push({
+      name: file.name,
+      path: fullPath,
+      isDirectory: file.isDirectory()
+    })
+  }
+
+  return filtered
 })
 ipcMain.handle('get-file-size', async (_event, filePath) => {
   const stat = await fs.promises.stat(filePath)
