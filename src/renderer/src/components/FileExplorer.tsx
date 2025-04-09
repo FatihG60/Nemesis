@@ -11,7 +11,8 @@ import {
   Input,
   Popconfirm,
   Select,
-  Progress
+  Progress,
+  Modal
 } from 'antd'
 import {
   FolderOpenOutlined,
@@ -42,6 +43,7 @@ const FileExplorer: React.FC = () => {
   const [addedFiles, setAddedFiles] = useState<FileEntry[]>([])
   const [filterText, setFilterText] = useState<string>('')
   const [zipProgress, setZipProgress] = useState<number | null>(null)
+  const [modalVisible, setModalVisible] = useState<boolean>(false)
 
   useEffect(() => {
     ipcRenderer
@@ -51,13 +53,12 @@ const FileExplorer: React.FC = () => {
       })
       .catch(() => message.error('Diskler alınamadı'))
   }, [])
+
   useEffect(() => {
     const onProgress = (_event: any, percent: number) => {
       setZipProgress(percent)
     }
-
     window.electron.ipcRenderer.on('zip-progress', onProgress)
-
     return () => {
       window.electron.ipcRenderer.removeAllListeners('zip-progress')
     }
@@ -84,9 +85,9 @@ const FileExplorer: React.FC = () => {
       }
       return
     }
-
     setCurrentPath(disk)
     loadDirectory(disk)
+    setModalVisible(true)
   }
 
   const loadDirectory = async (path: string) => {
@@ -117,6 +118,9 @@ const FileExplorer: React.FC = () => {
   const handleCheck = (path: string, checked: boolean) => {
     setSelectedEntries((prev) => (checked ? [...prev, path] : prev.filter((p) => p !== path)))
   }
+  const areAllSelectedInCurrent = () =>
+    filteredEntries.every((entry) => selectedEntries.includes(entry.path))
+  
 
   const handleAdd = async () => {
     const selectedFiles = entries.filter((entry) => selectedEntries.includes(entry.path))
@@ -131,6 +135,7 @@ const FileExplorer: React.FC = () => {
     )
     setAddedFiles((prev) => [...prev, ...withSize])
     setSelectedEntries([])
+    setModalVisible(false)
   }
 
   const handleRemoveFromList = (path: string) => {
@@ -167,77 +172,30 @@ const FileExplorer: React.FC = () => {
 
   return (
     <Card title="Dosya Gezgini" style={{ maxWidth: 800, margin: '0 auto', marginTop: 32 }}>
-      <Breadcrumb style={{ marginBottom: 16 }}>
-        <Breadcrumb.Item>
-          <Select placeholder="Disk seçin" onChange={handleDiskSelect} style={{ width: 150 }}>
-            {disks.map((disk) => (
-              <Option key={disk} value={disk}>
-                {disk}
-              </Option>
-            ))}
-            <Option key="MTP" value="MTP">
-              📱 MTP (Telefon)
-            </Option>
-          </Select>
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>
-          <Button onClick={handleGoUp} icon={<ArrowUpOutlined />}>
-            Yukarı Git
-          </Button>
-        </Breadcrumb.Item>
-        {currentPath && <Breadcrumb.Item>{currentPath}</Breadcrumb.Item>}
-      </Breadcrumb>
-
-      <Search
-        placeholder="Dosya ara"
-        onChange={(e) => setFilterText(e.target.value)}
-        style={{ marginBottom: 16 }}
-        allowClear
-      />
-
-      <List
-        bordered
-        dataSource={filteredEntries}
-        renderItem={(entry) => (
-          <List.Item
-            onClick={() => entry.isDirectory && handleEntryClick(entry)}
-            style={{ cursor: entry.isDirectory ? 'pointer' : 'default' }}
-            actions={[
-              <Checkbox
-                checked={selectedEntries.includes(entry.path)}
-                onChange={(e) => handleCheck(entry.path, e.target.checked)}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ]}
-          >
-            {entry.isDirectory ? <FolderOpenOutlined /> : <FileOutlined />} &nbsp;
-            <Text>{entry.name}</Text>
-          </List.Item>
-        )}
-      />
-
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={handleAdd}
-        style={{ marginTop: 16 }}
-        disabled={selectedEntries.length === 0}
+      <Select
+        placeholder="Disk seçin"
+        onChange={handleDiskSelect}
+        style={{ width: 200, marginBottom: 16 }}
       >
-        Seçilenleri Ekle
-      </Button>
+        {disks.map((disk) => (
+          <Option key={disk} value={disk}>
+            {disk}
+          </Option>
+        ))}
+        <Option key="MTP" value="MTP">
+          📱 MTP (Telefon)
+        </Option>
+      </Select>
 
       {addedFiles.length > 0 && (
         <Card title="Eklenen Dosyalar" style={{ marginTop: 24 }}>
           <Table
             dataSource={addedFiles}
             rowKey="path"
+            size='small'
             pagination={false}
             columns={[
-              {
-                title: 'Adı',
-                dataIndex: 'name',
-                key: 'name'
-              },
+              { title: 'Adı', dataIndex: 'name', key: 'name' },
               {
                 title: 'Boyut',
                 dataIndex: 'size',
@@ -272,6 +230,79 @@ const FileExplorer: React.FC = () => {
           {zipProgress !== null && <Progress percent={zipProgress} style={{ marginTop: 12 }} />}
         </Card>
       )}
+
+      <Modal
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        title="Dosya Seçimi"
+        width={700}
+      >
+        <Breadcrumb style={{ marginBottom: 16 }}>
+          <Breadcrumb.Item>
+            <Button onClick={handleGoUp} icon={<ArrowUpOutlined />}>
+              Yukarı Git
+            </Button>
+          </Breadcrumb.Item>
+          {currentPath && <Breadcrumb.Item>{currentPath}</Breadcrumb.Item>}
+        </Breadcrumb>
+
+        <Search
+          placeholder="Dosya ara"
+          onChange={(e) => setFilterText(e.target.value)}
+          style={{ marginBottom: 16 }}
+          allowClear
+        />
+        <div style={{ marginBottom: 12, marginLeft: 10 }}>
+          <Checkbox
+            checked={areAllSelectedInCurrent()}
+            onChange={(e) => {
+              if (e.target.checked) {
+                const allPaths = filteredEntries.map((entry) => entry.path)
+                setSelectedEntries((prev) => [...new Set([...prev, ...allPaths])])
+              } else {
+                const currentPaths = filteredEntries.map((entry) => entry.path)
+                setSelectedEntries((prev) => prev.filter((p) => !currentPaths.includes(p)))
+              }
+            }}
+            style={{ transform: 'scale(1.1)' }}
+          >
+            Bu dizindeki tümünü seç
+          </Checkbox>
+        </div>
+
+        <List
+          bordered
+          dataSource={filteredEntries}
+          renderItem={(entry) => (
+            <List.Item
+              onClick={() => entry.isDirectory && handleEntryClick(entry)}
+              style={{ cursor: entry.isDirectory ? 'pointer' : 'default', padding: '4px 8px' }}
+              actions={[
+                <Checkbox
+                  style={{ transform: 'scale(1.5)' }}
+                  checked={selectedEntries.includes(entry.path)}
+                  onChange={(e) => handleCheck(entry.path, e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ]}
+            >
+              {entry.isDirectory ? <FolderOpenOutlined /> : <FileOutlined />} &nbsp;
+              <Text>{entry.name}</Text>
+            </List.Item>
+          )}
+        />
+
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+          style={{ marginTop: 16 }}
+          disabled={selectedEntries.length === 0}
+        >
+          Seçilenleri Ekle
+        </Button>
+      </Modal>
     </Card>
   )
 }
