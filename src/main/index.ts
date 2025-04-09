@@ -171,6 +171,37 @@ function zipFilesWithStructure(
   })
 }
 
+interface FileEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  size?: number
+}
+ipcMain.handle('list-all-files', async (_event, dirPath: string) => {
+  const results: FileEntry[] = []
+
+  async function walk(dir: string) {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await walk(fullPath)
+      } else {
+        const stat = await fs.promises.stat(fullPath)
+        results.push({
+          name: entry.name,
+          path: fullPath,
+          isDirectory: false,
+          size: stat.size
+        })
+      }
+    }
+  }
+
+  await walk(dirPath)
+  return results
+})
+
 // 🚀 **USB Depolama Aygıtlarını Listele**
 ipcMain.handle('get-usb-drives', async () => {
   return new Promise((resolve, reject) => {

@@ -44,6 +44,8 @@ const FileExplorer: React.FC = () => {
   const [filterText, setFilterText] = useState<string>('')
   const [zipProgress, setZipProgress] = useState<number | null>(null)
   const [modalVisible, setModalVisible] = useState<boolean>(false)
+  const [allFiles, setAllFiles] = useState<FileEntry[]>([])
+
 
   useEffect(() => {
     ipcRenderer
@@ -53,6 +55,28 @@ const FileExplorer: React.FC = () => {
       })
       .catch(() => message.error('Diskler alınamadı'))
   }, [])
+  /*useEffect(() => {
+    if (addedFiles.length > 0) {
+      updateAllFiles()
+    } else {
+      setAllFiles([])
+    }
+  }, [addedFiles])*/
+  const updateAllFiles = async () => {
+    const flatFiles: FileEntry[] = []
+  
+    for (const item of addedFiles) {
+      if (!item.isDirectory) {
+        flatFiles.push(item)
+      } else {
+        const children: FileEntry[] = await ipcRenderer.invoke('list-all-files', item.path)
+        flatFiles.push(...children)
+      }
+    }
+  
+    setAllFiles(flatFiles)
+  }
+  
 
   useEffect(() => {
     const onProgress = (_event: any, percent: number) => {
