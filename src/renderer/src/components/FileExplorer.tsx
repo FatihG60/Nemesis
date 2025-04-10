@@ -208,6 +208,10 @@ const FileExplorer: React.FC = () => {
       const file = item.getAsFile()
       if (!file) continue
 
+      if (!file.path) {
+        message.warning(`"${file.name}" adlı dosyanın path bilgisi alınamadı. MTP aygıtlarından sürüklenen dosyalar desteklenmeyebilir.`);
+        return;
+      }
       const path = (file as any).path // Electron'da özel olarak mevcut
       const isDirectory = await ipcRenderer.invoke('is-directory', path)
       const size = !isDirectory ? await ipcRenderer.invoke('get-file-size', path) : undefined
