@@ -46,7 +46,6 @@ const FileExplorer: React.FC = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false)
   const [allFiles, setAllFiles] = useState<FileEntry[]>([])
 
-
   useEffect(() => {
     ipcRenderer
       .invoke('list-root-disks')
@@ -64,7 +63,7 @@ const FileExplorer: React.FC = () => {
   }, [addedFiles])*/
   const updateAllFiles = async () => {
     const flatFiles: FileEntry[] = []
-  
+
     for (const item of addedFiles) {
       if (!item.isDirectory) {
         flatFiles.push(item)
@@ -73,10 +72,9 @@ const FileExplorer: React.FC = () => {
         flatFiles.push(...children)
       }
     }
-  
+
     setAllFiles(flatFiles)
   }
-  
 
   useEffect(() => {
     const onProgress = (_event: any, percent: number) => {
@@ -144,7 +142,6 @@ const FileExplorer: React.FC = () => {
   }
   const areAllSelectedInCurrent = () =>
     filteredEntries.every((entry) => selectedEntries.includes(entry.path))
-  
 
   const handleAdd = async () => {
     const selectedFiles = entries.filter((entry) => selectedEntries.includes(entry.path))
@@ -157,7 +154,11 @@ const FileExplorer: React.FC = () => {
         return file
       })
     )
-    setAddedFiles((prev) => [...prev, ...withSize])
+    // Zaten eklenmiş olanları filtrele
+    const newFiles = withSize.filter(
+      (file) => !addedFiles.some((existing) => existing.path === file.path)
+    )
+    setAddedFiles((prev) => [...prev, ...newFiles])
     setSelectedEntries([])
     setModalVisible(false)
   }
@@ -193,9 +194,47 @@ const FileExplorer: React.FC = () => {
   const filteredEntries = entries.filter((entry) =>
     entry.name.toLowerCase().includes(filterText.toLowerCase())
   )
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    const items = Array.from(e.dataTransfer.items)
+
+    const fileEntries: FileEntry[] = []
+
+    for (const item of items) {
+      const file = item.getAsFile()
+      if (!file) continue
+
+      const path = (file as any).path // Electron'da özel olarak mevcut
+      const isDirectory = await ipcRenderer.invoke('is-directory', path)
+      const size = !isDirectory ? await ipcRenderer.invoke('get-file-size', path) : undefined
+
+      fileEntries.push({
+        name: file.name,
+        path,
+        isDirectory,
+        size
+      })
+    }
+
+    // Zaten eklenmiş olanları filtrele
+    const newFiles = fileEntries.filter(
+      (file) => !addedFiles.some((existing) => existing.path === file.path)
+    )
+
+    setAddedFiles((prev) => [...prev, ...newFiles])
+  }
 
   return (
-    <Card title="Dosya Gezgini" style={{ maxWidth: 800, margin: '0 auto', marginTop: 32 }}>
+    <Card
+      title="Dosya Gezgini"
+      style={{ maxWidth: 800, margin: '0 auto', marginTop: 32 }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <Select
         placeholder="Disk seçin"
         onChange={handleDiskSelect}
@@ -216,7 +255,7 @@ const FileExplorer: React.FC = () => {
           <Table
             dataSource={addedFiles}
             rowKey="path"
-            size='small'
+            size="small"
             pagination={false}
             columns={[
               { title: 'Adı', dataIndex: 'name', key: 'name' },

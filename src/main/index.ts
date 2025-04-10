@@ -201,6 +201,15 @@ ipcMain.handle('list-all-files', async (_event, dirPath: string) => {
   await walk(dirPath)
   return results
 })
+ipcMain.handle('is-directory', async (_event, filePath: string) => {
+  try {
+    const stat = await fs.promises.stat(filePath)
+    return stat.isDirectory()
+  } catch (err) {
+    console.error(`is-directory error:`, err)
+    return false
+  }
+})
 
 // 🚀 **USB Depolama Aygıtlarını Listele**
 ipcMain.handle('get-usb-drives', async () => {
