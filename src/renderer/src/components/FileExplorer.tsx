@@ -209,8 +209,10 @@ const FileExplorer: React.FC = () => {
       if (!file) continue
 
       if (!file.path) {
-        message.warning(`"${file.name}" adlı dosyanın path bilgisi alınamadı. MTP aygıtlarından sürüklenen dosyalar desteklenmeyebilir.`);
-        return;
+        message.warning(
+          `"${file.name}" adlı dosyanın path bilgisi alınamadı. MTP aygıtlarından sürüklenen dosyalar desteklenmeyebilir.`
+        )
+        return
       }
       const path = (file as any).path // Electron'da özel olarak mevcut
       const isDirectory = await ipcRenderer.invoke('is-directory', path)
@@ -304,6 +306,7 @@ const FileExplorer: React.FC = () => {
         footer={null}
         title="Dosya Seçimi"
         width={700}
+        bodyStyle={{ maxHeight: '70vh'}}
       >
         <Breadcrumb style={{ marginBottom: 16 }}>
           <Breadcrumb.Item>
@@ -334,41 +337,48 @@ const FileExplorer: React.FC = () => {
             }}
             style={{ transform: 'scale(1.1)' }}
           >
-            Bu dizindeki tümünü seç
+            Tümünü Seç
           </Checkbox>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAdd}
+            style={{ marginTop: 16 }}
+            disabled={selectedEntries.length === 0}
+          >
+            Ekle
+          </Button>
         </div>
-
-        <List
-          bordered
-          dataSource={filteredEntries}
-          renderItem={(entry) => (
-            <List.Item
-              onClick={() => entry.isDirectory && handleEntryClick(entry)}
-              style={{ cursor: entry.isDirectory ? 'pointer' : 'default', padding: '4px 8px' }}
-              actions={[
-                <Checkbox
-                  style={{ transform: 'scale(1.5)' }}
-                  checked={selectedEntries.includes(entry.path)}
-                  onChange={(e) => handleCheck(entry.path, e.target.checked)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ]}
-            >
-              {entry.isDirectory ? <FolderOpenOutlined /> : <FileOutlined />} &nbsp;
-              <Text>{entry.name}</Text>
-            </List.Item>
-          )}
-        />
-
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-          style={{ marginTop: 16 }}
-          disabled={selectedEntries.length === 0}
+        <div
+          style={{
+            maxHeight: '300px',
+            overflowY: 'auto',
+            border: '1px solid #f0f0f0',
+            borderRadius: 4
+          }}
         >
-          Seçilenleri Ekle
-        </Button>
+          <List
+            bordered
+            dataSource={filteredEntries}
+            renderItem={(entry) => (
+              <List.Item
+                onClick={() => entry.isDirectory && handleEntryClick(entry)}
+                style={{ cursor: entry.isDirectory ? 'pointer' : 'default', padding: '4px 8px' }}
+                actions={[
+                  <Checkbox
+                    style={{ transform: 'scale(1.5)' }}
+                    checked={selectedEntries.includes(entry.path)}
+                    onChange={(e) => handleCheck(entry.path, e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ]}
+              >
+                {entry.isDirectory ? <FolderOpenOutlined /> : <FileOutlined />} &nbsp;
+                <Text>{entry.name}</Text>
+              </List.Item>
+            )}
+          />
+        </div>
       </Modal>
     </Card>
   )
